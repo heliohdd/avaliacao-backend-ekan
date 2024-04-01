@@ -15,14 +15,20 @@ public class CadastroDocumentoService {
 
 	@Autowired
 	private DocumentoRepository documentoRepository;
-	
+
 	public Documento salvar(Documento documento) {
-		return documentoRepository.salvar(documento);
+		Long documentoId = documento.getId();
+		
+		Documento documentoAtual = documentoRepository.findById(documentoId)
+			.orElseThrow(() -> new EntidadeNaoEncontradaException(
+					String.format("Não existe cadastro de documento com código %d", documentoId)));
+		
+		return documentoRepository.save(documentoAtual);
 	}
 	
 	public void excluir(Long documentoId) {
 		try {
-			documentoRepository.remover(documentoId);
+			documentoRepository.deleteById(documentoId);
 		
 		} catch (EmptyResultDataAccessException e) {
 			throw new EntidadeNaoEncontradaException (

@@ -1,6 +1,7 @@
 package com.ekan.backend.api.controller;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ekan.backend.domain.exception.EntidadeEmUsoException;
@@ -34,35 +34,42 @@ public class DocumentoController {
 
 	@GetMapping
 	public List<Documento> listar() {
-		return documentoRepository.listar();
+		return documentoRepository.findAll();
 	}
 
 	@GetMapping(value = "/{documentoId}")
 	public ResponseEntity<Documento> buscar(@PathVariable Long documentoId) {
-		Documento documento = documentoRepository.buscar(documentoId);
+		Optional<Documento> documento = documentoRepository.findById(documentoId);
 
-		if (documento != null) {
-			return ResponseEntity.ok(documento);
+		if (documento.isPresent()) {
+			return ResponseEntity.ok(documento.get());
 		}
 		return ResponseEntity.notFound().build();
 	}
 	
 	@PostMapping
-	@ResponseStatus(HttpStatus.CREATED)
-	public Documento adicionar(@RequestBody Documento documento) {
-		return cadastroDocumento.salvar(documento);
+	public ResponseEntity<?> adicionar(@RequestBody Documento documento) {
+		try {
+			documento = cadastroDocumento.salvar(documento);
+			
+			return ResponseEntity.status(HttpStatus.CREATED)
+					.body(documento);
+		} catch (EntidadeNaoEncontradaException e) {
+			return ResponseEntity.badRequest()
+					.body(e.getMessage());
+		}
 	}
 
 	@PutMapping("/{documentoId}")
 	public ResponseEntity<Documento> atualizar(@PathVariable Long documentoId, 
 			@RequestBody Documento documento) {
-		Documento documentoAtual = documentoRepository.buscar(documentoId);
+		Optional<Documento> documentoAtual = documentoRepository.findById(documentoId);
 
-		if (documentoAtual != null) {
-			BeanUtils.copyProperties(documento, documentoAtual, "id");
+		if (documentoAtual.isPresent()) {
+			BeanUtils.copyProperties(documento, documentoAtual.get(), "id");
 
-			documentoRepository.salvar(documentoAtual);
-			return ResponseEntity.ok(documentoAtual);
+			Documento documentoSalvo = cadastroDocumento.salvar(documentoAtual.get());
+			return ResponseEntity.ok(documentoSalvo);
 		}
 
 		return ResponseEntity.notFound().build();
